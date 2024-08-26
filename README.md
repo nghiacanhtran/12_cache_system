@@ -10,7 +10,6 @@
     - [Read-Through Pattern](#read-through-pattern)
   - [Thiết kế hệ thống với redis](#thiết-kế-hệ-thống-với-redis)
 
-
 ## Mục đích và yêu cầu
 
 - Tăng tốc truy xuất dữ liệu bảng tham số.
@@ -36,10 +35,28 @@
 
   Sơ đồ
 
-         Ứng dụng  ---> Kiểm tra Cache ---> Nếu cache hit ---> Trả về dữ liệu từ cache
-                        |
-                        ---> Nếu cache miss ---> Truy vấn cơ sở dữ liệu gốc ---> Cập nhật cache ---> Trả về dữ liệu từ cơ sở dữ liệu
+  ```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
 
+    App->>Cache: Request Data
+    alt Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>Cache: Store in Cache
+    end
+    Cache->>App: Return Data
+
+    Note right of App: Subsequent request
+
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+    end
+
+  ```
 
 ### Write-Through Pattern
 
@@ -57,14 +74,27 @@
 
   Sơ đồ
 
-      Ứng dụng  ---> Ghi vào Cache ---> Đồng thời ghi vào cơ sở dữ liệu gốc
-      |
-      v
-      Kiểm tra Cache khi đọc ---> Nếu cache hit, trả về dữ liệu từ cache
-                        |
-                        v
-            Nếu cache miss, lấy dữ liệu từ cơ sở dữ liệu gốc và cập nhật cache
+  ```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
 
+    App->>Cache: Write Data
+    Cache->>DataSource: Write Data
+    DataSource->>Cache: Confirm Write
+    Cache->>App: Confirm Write
+
+    Note right of App: Read Data
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+    else Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>App: Return Data
+    end
+```
 
 ### Write-Behind (Write-Back) Pattern
   
@@ -90,7 +120,7 @@
 
       Việc đồng bộ hoá phức tạp. 
 
-  Sơ đồ  hoạt động 
+  Sơ đồ  hoạt động
 
         Ứng dụng ---> Ghi vào Cache ---> Cache lưu trữ dữ liệu tạm thời
         |                                  |
@@ -113,7 +143,7 @@
 
 - Refresh-Ahead Pattern
 
-  Chủ động cập nhật dữ liệu trong bộ đệm trước khi dữ liệu trở nên cũ hoặc lỗi thời 
+  Chủ động cập nhật dữ liệu trong bộ đệm trước khi dữ liệu trở nên cũ hoặc lỗi thời
 
   Ưu điểm  
 
