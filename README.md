@@ -1,5 +1,16 @@
 # Thiết kế  hệ thống cache
 
+- [Thiết kế  hệ thống cache](#thiết-kế--hệ-thống-cache)
+  - [Mục đích và yêu cầu](#mục-đích-và-yêu-cầu)
+  - [Design pattner](#design-pattner)
+    - [Cache-Aside (Lazy Loading) Pattern](#cache-aside-lazy-loading-pattern)
+    - [Write-Through Pattern](#write-through-pattern)
+    - [Write-Behind (Write-Back) Pattern](#write-behind-write-back-pattern)
+    - [Cache Invalidation Pattern](#cache-invalidation-pattern)
+    - [Read-Through Pattern](#read-through-pattern)
+  - [Thiết kế hệ thống với redis](#thiết-kế-hệ-thống-với-redis)
+
+
 ## Mục đích và yêu cầu
 
 - Tăng tốc truy xuất dữ liệu bảng tham số.
@@ -7,7 +18,7 @@
 
 ## Design pattner
 
-- Cache-Aside (Lazy Loading) Pattern
+### Cache-Aside (Lazy Loading) Pattern
   
   Hệ thống sẽ tìm kiếm  trong bộ nhớ đệm, nếu trong bộ nhớ đệm không tồn tại hệ thống sẽ tìm kiếm trong bộ nhớ chính, lưu trữ vào bộ nhớ đệm sau đó trả cho người dùng.Phù hợp cho các dữ liệu ít thay đổi nhưng được truy cập thường xuyên.
 
@@ -30,7 +41,7 @@
                         ---> Nếu cache miss ---> Truy vấn cơ sở dữ liệu gốc ---> Cập nhật cache ---> Trả về dữ liệu từ cơ sở dữ liệu
 
 
-- Write-Through Pattern
+### Write-Through Pattern
 
   Khi có yêu cầu ghi dữ liệu vào database,thì dữ liệu được cập nhật vào cả bộ nhớ cache và bộ nhớ chính.
 
@@ -55,7 +66,7 @@
             Nếu cache miss, lấy dữ liệu từ cơ sở dữ liệu gốc và cập nhật cache
 
 
-- Write-Behind (Write-Back) Pattern
+### Write-Behind (Write-Back) Pattern
   
   Khi dữ liệu được thêm mới hoặc cập nhật, ứng dụng chỉ cập nhật vào bộ nhớ đệm,nhưng không ghi ngay vào database(bất đồng bộ).Việc ghi dữ liệu vào database sẽ được thiết kế theo một tiêu chuẩn nhất định, ví dụ mốc thời gian , hoặc số lương bản ghi đạt một ngưỡng nào đó.
 
@@ -94,7 +105,7 @@
 
   `Theo dõi và giám sát`: Sử dụng các công cụ giám sát để theo dõi hoạt động của cache và đảm bảo quá trình đồng bộ hóa diễn ra suôn sẻ.
 
-- Cache Invalidation Pattern
+### Cache Invalidation Pattern
 
   Khi dữ liệu trong nguồn chính được cập nhật thì dữ liệu trong bộ đệm sẽ bị xoá để thể hiện việc sử dụng dữ liệu bị lỗi thời hoặc không chính xác
 
@@ -122,7 +133,7 @@
 
       Với những hệ thống cần cập nhật dữ liệu liên tục Refresh-Ahead có thể không cập nhật dữ liệu kịp thời, gây ra trạng thái thiếu nhất quán.
 
-- Read-Through Pattern
+### Read-Through Pattern
 
   Khi có một yêu cầu lấy dữ liệu, ứng dụng sẽ kiểm tra trong cache đầu tiên.Nếu dữ liệu đã có trong cache, thì sẽ trả về dữ liệu trong cache. Nếu không có dữ liệu sẽ lấy từ database và cập nhật vào cache.
 
