@@ -7,6 +7,7 @@
     - [Write-Through Pattern](#write-through-pattern)
     - [Write-Behind (Write-Back) Pattern](#write-behind-write-back-pattern)
     - [Cache Invalidation Pattern](#cache-invalidation-pattern)
+    - [Refresh-Ahead Pattern](#refresh-ahead-pattern)
     - [Read-Through Pattern](#read-through-pattern)
   - [Thiết kế hệ thống với redis](#thiết-kế-hệ-thống-với-redis)
 
@@ -122,10 +123,30 @@ sequenceDiagram
 
   Sơ đồ  hoạt động
 
-        Ứng dụng ---> Ghi vào Cache ---> Cache lưu trữ dữ liệu tạm thời
-        |                                  |
-        v                                  |
-        Trả về phản hồi ngay lập tức     Đồng bộ hóa không đồng bộ với cơ sở dữ liệu gốc
+  ```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
+
+    App->>Cache: Write Data
+    Cache->>Cache: Update Cache (Deferred Write)
+    Note right of Cache: Data is updated in cache immediately, but deferred write to the data source.
+
+    Note right of App: Read Data
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+    else Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>App: Return Data
+    end
+
+    Note right of Cache: Periodic Write to Data Source
+    Cache->>DataSource: Write Data (Batch/Asynchronous)
+    DataSource->>Cache: Confirm Write
+```
 
   Những Biện Pháp Giảm Thiểu Rủi Ro
 
@@ -141,7 +162,40 @@ sequenceDiagram
 
   Hệ thống có thể áp dụng như sau, ví dụ khi backend web cập nhật dữ liệu , hệ thống sẽ tiến hành xoá bỏ bộ nhớ đệm.Khi Frontend web lấy dữ liệu sẽ được nhắc nhở lấy dữ liệu từ hệ thống chính và cập nhật vào bộ đệm.
 
-- Refresh-Ahead Pattern
+  Sơ đồ
+
+``` mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
+
+    Note over DataSource: Data is updated in the Data Source
+
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+    else Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>App: Return Data
+    end
+
+    Note over Cache: Invalidate Cache Entry
+    DataSource->>Cache: Invalidate Cache Entry
+    Cache->>Cache: Remove or Mark Cache Entry as Invalid
+
+    Note over Cache: Cache Miss for updated data
+    App->>Cache: Request Data
+    alt Cache Miss
+        Cache->>DataSource: Fetch Updated Data
+        DataSource->>Cache: Return Updated Data
+        Cache->>App: Return Updated Data
+    end
+
+```
+
+### Refresh-Ahead Pattern
 
   Chủ động cập nhật dữ liệu trong bộ đệm trước khi dữ liệu trở nên cũ hoặc lỗi thời
 
