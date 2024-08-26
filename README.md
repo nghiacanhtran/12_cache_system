@@ -217,6 +217,33 @@ sequenceDiagram
 
       Với những hệ thống cần cập nhật dữ liệu liên tục Refresh-Ahead có thể không cập nhật dữ liệu kịp thời, gây ra trạng thái thiếu nhất quán.
 
+  Sơ đồ
+
+``` mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
+
+    Note over Cache: Cache Entry Expiration Time
+
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+        Note over Cache: Refresh Data Before Expiration
+        Cache->>DataSource: Fetch Updated Data (Ahead of Time)
+        DataSource->>Cache: Return Updated Data
+        Cache->>Cache: Update Cache with New Data
+    else Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>App: Return Data
+        Note over Cache: Schedule Refresh Ahead
+        Cache->>Cache: Schedule Data Refresh Before Expiration
+    end
+
+```
+
 ### Read-Through Pattern
 
   Khi có một yêu cầu lấy dữ liệu, ứng dụng sẽ kiểm tra trong cache đầu tiên.Nếu dữ liệu đã có trong cache, thì sẽ trả về dữ liệu trong cache. Nếu không có dữ liệu sẽ lấy từ database và cập nhật vào cache.
@@ -231,4 +258,23 @@ sequenceDiagram
 
       Dữ liệu trong bộ nhớ đệm có thể thường xuyên không được cập nhật.
 
+  Sơ đồ
+
+``` mermaid
+sequenceDiagram
+    participant App as Application
+    participant Cache as Cache
+    participant DataSource as Data Source
+
+    App->>Cache: Request Data
+    alt Cache Hit
+        Cache->>App: Return Data
+    else Cache Miss
+        Cache->>DataSource: Fetch Data
+        DataSource->>Cache: Return Data
+        Cache->>Cache: Store Data in Cache
+        Cache->>App: Return Data
+    end
+
+```
 ## Thiết kế hệ thống với redis
